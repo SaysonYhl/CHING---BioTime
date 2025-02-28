@@ -1,6 +1,17 @@
 {
     "db_path": "C:/Program Files (x86)/ZKBio Time.Net/TimeNet.db",
-    "report_directory": "D:/Downloads",
-    "daily_salary": 410.0,
-    "deduction_per_minute": 0.85
+    "report_directory": "C:/Users/yhljo/Documents",
+    "department_salaries": {
+        "Dining_1": 425.0,
+        "Dining_2": 410.0,
+        "Chief Cook": 933.3,
+        "Senior Cook": 833.3,
+        "Cook": 666.66,
+        "Chief Cutter": 900.0,
+        "Senior Cutter": 600.0,
+        "Cutter": 433.3,
+        "Quality Control": 533.3,
+        "Senior Helper": 450.0,
+        "Helper": 410.0
+    }
 }
