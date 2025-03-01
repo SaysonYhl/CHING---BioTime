@@ -1,17 +1,17 @@
 {
     "db_path": "C:/Program Files (x86)/ZKBio Time.Net/TimeNet.db",
-    "report_directory": "C:/Users/yhljo/Documents",
+    "report_directory": "C:/Users/Public/Documents",
     "department_salaries": {
-        "Dining_1": 425.0,
-        "Dining_2": 410.0,
-        "Chief Cook": 933.3,
-        "Senior Cook": 833.3,
-        "Cook": 666.66,
-        "Chief Cutter": 900.0,
-        "Senior Cutter": 600.0,
-        "Cutter": 433.3,
-        "Quality Control": 533.3,
-        "Senior Helper": 450.0,
-        "Helper": 410.0
+        "Dining 1": 12750.0,
+        "Dining 2": 12300.0,
+        "Chief Cook": 28000.0,
+        "Senior Cook": 25000.0,
+        "Cook": 20000.0,
+        "Chief Cutter": 27000.0,
+        "Senior Cutter": 18000.0,
+        "Cutter": 13000.0,
+        "Quality Control": 16000.0,
+        "Senior Helper": 13500.0,
+        "Helper": 12300.0
     }
 }

@@ -7,7 +7,9 @@ import os
 import subprocess
 import json
 
-# time constants
+# ===============================================================
+# TIME CONSTANTS
+# ===============================================================
 am_start = datetime.time(7, 30, 0)  # 7:30 am start time
 am_late = datetime.time(9, 30, 0)  # 9:30 am late start
 am_absent = datetime.time(10, 0, 0)  # 10:15 am absent
@@ -22,7 +24,12 @@ pm_latest_out = datetime.time(23, 59, 0)  # 11:59 pm latest out
 
 config_file = "config.json"
 
-# Load configuration
+
+# ===============================================================
+# CONFIGURATION MANAGEMENT
+# ===============================================================
+
+# Load configuration from file or return defaults
 def load_config():
     try:
         with open(config_file, "r") as f:
@@ -30,24 +37,24 @@ def load_config():
     except (FileNotFoundError, json.JSONDecodeError):
         return {
             "db_path": "C:/Program Files (x86)/ZKBio Time.Net/TimeNet.db",
-            "report_directory": "D:/Downloads",
-            "daily_salary": 410.0,
-            "deduction_per_minute": 0.85,
+            "report_directory": "C:/Users/Public/Documents",
             "department_salaries": {
-                "Dining_1": 425,
-                "Dining_2": 410,
-                "Chief Cook": 933.3,
-                "Senior Cook": 833.3,
-                "Cook": 666.66,
-                "Chief Cutter": 900,
-                "Senior Cutter": 600,
-                "Cutter": 433.3,
-                "Quality Control": 533.3,
-                "Senior Helper": 450,
-                "Helper": 410
+                "Dining 1": 12750.0,
+                "Dining 2": 12300.0,
+                "Chief Cook": 28000.0,
+                "Senior Cook": 25000.0,
+                "Cook": 20000.0,
+                "Chief Cutter": 27000.0,
+                "Senior Cutter": 18000.0,
+                "Cutter": 13000.0,
+                "Quality Control": 16000.0,
+                "Senior Helper": 13500.0,
+                "Helper": 12300.0
             }
         }
 
+
+# Get salary configuration for a specific department
 def get_salary_config(dept_name):
     """Return salary configuration based on department role"""
 
@@ -55,65 +62,71 @@ def get_salary_config(dept_name):
 
     # Define deduction rates and absence deductions based on department salaries
     role_config = {
-        "Dining_1": {
-            "daily_salary": config["department_salaries"]["Dining_1"],
-            "deduction_per_minute": 3,
-            "absence_deduction": config["department_salaries"]["Dining_1"] / 2
+        "Dining 1": {
+            "daily_salary": config["department_salaries"]["Dining 1"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Dining 1"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Dining 1"] / 30) / 2
         },
-        "Dining_2": {
-            "daily_salary": config["department_salaries"]["Dining_2"],
-            "deduction_per_minute": 3,
-            "absence_deduction": config["department_salaries"]["Dining_2"] / 2
+        "Dining 2": {
+            "daily_salary": config["department_salaries"]["Dining 2"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Dining 2"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Dining 2"] / 30) / 2
         },
         "Chief Cook": {
-            "daily_salary": config["department_salaries"]["Chief Cook"],
-            "deduction_per_minute": 6,
-            "absence_deduction": config["department_salaries"]["Chief Cook"] / 2
+            "daily_salary": config["department_salaries"]["Chief Cook"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Chief Cook"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Chief Cook"] / 30) / 2
         },
         "Senior Cook": {
-            "daily_salary": config["department_salaries"]["Senior Cook"],
-            "deduction_per_minute": 5.5,
-            "absence_deduction": config["department_salaries"]["Senior Cook"] / 2
+            "daily_salary": config["department_salaries"]["Senior Cook"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Senior Cook"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Senior Cook"] / 30) / 2
         },
         "Cook": {
-            "daily_salary": config["department_salaries"]["Cook"],
-            "deduction_per_minute": 4.5,
-            "absence_deduction": config["department_salaries"]["Cook"] / 2
+            "daily_salary": config["department_salaries"]["Cook"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Cook"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Cook"] / 30) / 2
         },
         "Chief Cutter": {
-            "daily_salary": config["department_salaries"]["Chief Cutter"],
-            "deduction_per_minute": 6,
-            "absence_deduction": config["department_salaries"]["Chief Cutter"] / 2
+            "daily_salary": config["department_salaries"]["Chief Cutter"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Chief Cutter"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Chief Cutter"] / 30) / 2
         },
         "Senior Cutter": {
-            "daily_salary": config["department_salaries"]["Senior Cutter"],
-            "deduction_per_minute": 4,
-            "absence_deduction": config["department_salaries"]["Senior Cutter"] / 2
+            "daily_salary": config["department_salaries"]["Senior Cutter"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Senior Cutter"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Senior Cutter"] / 30) / 2
         },
         "Cutter": {
-            "daily_salary": config["department_salaries"]["Cutter"],
-            "deduction_per_minute": 3,
-            "absence_deduction": config["department_salaries"]["Cutter"] / 2
+            "daily_salary": config["department_salaries"]["Cutter"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Cutter"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Cutter"] / 30) / 2
         },
         "Quality Control": {
-            "daily_salary": config["department_salaries"]["Quality Control"],
-            "deduction_per_minute": 3.5,
-            "absence_deduction": config["department_salaries"]["Quality Control"] / 2
+            "daily_salary": config["department_salaries"]["Quality Control"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Quality Control"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Quality Control"] / 30) / 2
         },
         "Senior Helper": {
-            "daily_salary": config["department_salaries"]["Senior Helper"],
-            "deduction_per_minute": 3,
-            "absence_deduction": config["department_salaries"]["Senior Helper"] / 2
+            "daily_salary": config["department_salaries"]["Senior Helper"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Senior Helper"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Senior Helper"] / 30) / 2
         },
         "Helper": {
-            "daily_salary": config["department_salaries"]["Helper"],
-            "deduction_per_minute": 2.5,
-            "absence_deduction": config["department_salaries"]["Helper"] / 2
+            "daily_salary": config["department_salaries"]["Helper"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Helper"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Helper"] / 30) / 2
         }
     }
 
     return role_config.get(dept_name)
 
+
+# ===============================================================
+# MAIN PROCESSING FUNCTION
+# ===============================================================
+
+# Process attendance data for a date range and generate Excel report
 def process_dates(start_date, end_date, excel_filename):
     try:
         # Load configuration
@@ -127,6 +140,7 @@ def process_dates(start_date, end_date, excel_filename):
         num_days = (end_dt - start_dt).days + 1
         total_shifts = num_days * 2
 
+        # Connect to database and retrieve punch data
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
             query = """
@@ -140,10 +154,12 @@ def process_dates(start_date, end_date, excel_filename):
             cursor.execute(query, (start_date, end_date))
             results = cursor.fetchall()
 
+            # Initialize employee attendance dictionary
             employee_attendance = {}
             for emp_id, first_name, last_name, department_id, dept_name, punch_time_str in results:
                 punch_time = datetime.datetime.strptime(punch_time_str, "%Y-%m-%d %H:%M:%S")
 
+                # Create employee record if doesn't exist
                 if emp_id not in employee_attendance:
                     # Get salary configuration based on department
                     salary_config = get_salary_config(dept_name)
@@ -167,8 +183,10 @@ def process_dates(start_date, end_date, excel_filename):
                         "punches": []
                     }
 
+                # Add punch time to employee's record
                 employee_attendance[emp_id]["punches"].append(punch_time)
 
+            # Process attendance for each employee
             for emp_id, data in employee_attendance.items():
                 # Get role-specific configuration
                 salary_config = get_salary_config(data["dept_name"])
@@ -176,6 +194,7 @@ def process_dates(start_date, end_date, excel_filename):
                 daily_salary = salary_config["daily_salary"]
                 absence_deduction = salary_config["absence_deduction"]
 
+                # Check attendance status
                 status = check_attendance(
                     data["punches"],
                     deduction_per_minute,
@@ -184,14 +203,18 @@ def process_dates(start_date, end_date, excel_filename):
                     end_date
                 )
 
+                # Update employee record with attendance status
                 data["late"] = status["Late Minutes"]
                 data["absent"] = status["Absent"]
                 data["deductions"] = status["Deductions"]
 
                 # Net salary calculation will happen in the Excel sheet via formulas
 
+            # Create report directory if it doesn't exist
             if not os.path.exists(report_directory):
                 os.makedirs(report_directory)
+
+            # Generate Excel report
             generate_excel(excel_filename, employee_attendance, start_date, end_date)
             print(f"Excel report generated successfully: {os.path.join(report_directory, excel_filename)}")
 
@@ -203,6 +226,11 @@ def process_dates(start_date, end_date, excel_filename):
         print(f"An unexpected error occurred: {e}")
 
 
+# ===============================================================
+# ATTENDANCE CHECKING
+# ===============================================================
+
+# Check attendance for an employee within the date range
 def check_attendance(punches, deduction_per_minute, absence_deduction, start_date, end_date):
     status = {"Late Minutes": 0, "Absent": 0, "Deductions": 0}
     punches.sort()
@@ -212,11 +240,12 @@ def check_attendance(punches, deduction_per_minute, absence_deduction, start_dat
     end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
     all_dates = [start_dt + datetime.timedelta(days=i) for i in range((end_dt - start_dt).days + 1)]
 
+    # Process each date in the range
     for current_date in all_dates:
         am_shift = []
         pm_shift = []
 
-        # Filter punches for the current date
+        # Filter punches for the current date and split by shift
         for punch in punches:
             if punch.date() == current_date:
                 if am_start <= punch.time() <= am_latest_out:
@@ -224,37 +253,46 @@ def check_attendance(punches, deduction_per_minute, absence_deduction, start_dat
                 elif pm_start <= punch.time() <= pm_latest_out:
                     pm_shift.append(punch)
 
-        # AM Shift Check
+        # Check morning shift attendance
         punch_in_am = next((p for p in am_shift if am_start <= p.time() < am_absent), None)
         punch_out_am = next((p for p in am_shift if am_end <= p.time() <= am_latest_out), None)
 
         if punch_in_am and punch_out_am:
+            # Employee was present but check if late
             if am_late <= punch_in_am.time() < am_absent:
                 late_minutes = (datetime.datetime.combine(current_date, punch_in_am.time()) - datetime.datetime.combine(
                     current_date, am_late)).total_seconds() // 60
                 status["Late Minutes"] += int(late_minutes)
                 status["Deductions"] += late_minutes * deduction_per_minute
         else:
+            # Employee was absent for morning shift
             status["Absent"] += 1
             status["Deductions"] += absence_deduction
 
-        # PM Shift Check
+        # Check afternoon shift attendance
         punch_in_pm = next((p for p in pm_shift if pm_start <= p.time() < pm_absent), None)
         punch_out_pm = next((p for p in pm_shift if pm_end <= p.time() <= pm_latest_out), None)
 
         if punch_in_pm and punch_out_pm:
+            # Employee was present but check if late
             if pm_late <= punch_in_pm.time() < pm_absent:
                 late_minutes = (datetime.datetime.combine(current_date, punch_in_pm.time()) - datetime.datetime.combine(
                     current_date, pm_late)).total_seconds() // 60
                 status["Late Minutes"] += int(late_minutes)
                 status["Deductions"] += late_minutes * deduction_per_minute
         else:
+            # Employee was absent for afternoon shift
             status["Absent"] += 1
             status["Deductions"] += absence_deduction
 
     return status
 
 
+# ===============================================================
+# EXCEL REPORT GENERATION
+# ===============================================================
+
+# Generate Excel report with attendance and salary data
 def generate_excel(filename, employee_attendance, start_date, end_date):
     # Load config before generating excel
     config = load_config()
@@ -280,6 +318,7 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         13: 14,  # Net Salary
     }
 
+    # Apply column widths
     for col_num, width in column_widths.items():
         sheet.column_dimensions[get_column_letter(col_num)].width = width
 
@@ -380,6 +419,7 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
     full_path = os.path.join(report_directory, filename)
     workbook.save(full_path)
 
+    # Try to open the Excel file automatically
     try:
         os.startfile(full_path) if os.name == 'nt' else subprocess.call(['open', full_path])
     except Exception as e:

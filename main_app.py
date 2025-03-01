@@ -11,21 +11,21 @@ config_file = "config.json"
 
 default_config = {
     "db_path": r"C:\Program Files (x86)\ZKBio Time.Net\TimeNet.db",
-    "report_directory": r"C:\Users\yhljo\PycharmProjects\PythonProject\HelloWorld",
+    "report_directory": r"C:\Users\Public\Documents",
     "daily_salary": float(410.0),
     "deduction_per_minute": float(0.85),
     "department_salaries": {
-        "Dining_1": 425,
-        "Dining_2": 410,
-        "Chief Cook": 933.3,
-        "Senior Cook": 833.3,
-        "Cook": 666.66,
-        "Chief Cutter": 900,
-        "Senior Cutter": 600,
-        "Cutter": 433.3,
-        "Quality Control": 533.3,
-        "Senior Helper": 450,
-        "Helper": 410
+        "Dining 1": 12750.0,
+        "Dining 2": 12300.0,
+        "Chief Cook": 28000.0,
+        "Senior Cook": 25000.0,
+        "Cook": 20000.0,
+        "Chief Cutter": 27000.0,
+        "Senior Cutter": 18000.0,
+        "Cutter": 13000.0,
+        "Quality Control": 16000.0,
+        "Senior Helper": 13500.0,
+        "Helper": 12300.0
     }
 }
 
@@ -49,7 +49,7 @@ def save_config(config):
 class Application(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.geometry("650x500")
+        self.geometry("670x480")
         self.title("CHING - BioTime")
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -158,7 +158,7 @@ class MainScreen(tk.Frame):
         # Generate Report button
         generate_button = tk.Button(self, text="Generate Report", font=('Segoe UI', 13),
                                     command=self.generate_report, bg="#6D2323", fg="white",
-                                    cursor="hand2", pady=5, width=50, relief=tk.RAISED)
+                                    cursor="hand2", pady=2, width=30, relief=tk.RAISED)
         generate_button.place(relx=0.5, rely=0.96, anchor="s")
 
     def generate_report(self):
@@ -265,14 +265,14 @@ class SettingsScreen(tk.Frame):
             frame = tk.Frame(settings_frame, bg="#FFFDF0")
             frame.pack(anchor="w", pady=5)
 
-            tk.Label(frame, text=label, font=('Segoe UI', 10), anchor="w", bg="#FFFDF0").pack(side=tk.TOP, anchor="w")
+            tk.Label(frame, text=label, font=('Segoe UI', 11), anchor="w", bg="#FFFDF0").pack(side=tk.TOP, anchor="w")
             justify = tk.CENTER if center else tk.LEFT
             entry = tk.Entry(frame, width=width, font=('Segoe UI', 10), justify=justify)
             entry.insert(0, entry_var)
             entry.pack(side=tk.TOP, anchor="w")
             return entry, frame
 
-        tk.Label(settings_frame, text="Paths:", font=('Segoe UI', 10, "bold"),
+        tk.Label(settings_frame, text="Paths:", font=('Segoe UI', 11, "bold"),
                  anchor="w", bg="#FFFDF0").pack(anchor="w")
 
         # Report directory
@@ -290,20 +290,20 @@ class SettingsScreen(tk.Frame):
         dept_salary_frame = tk.Frame(settings_frame, bg="#FFFDF0")
         dept_salary_frame.pack(anchor="w", pady=5)
 
-        tk.Label(dept_salary_frame, text="Salary Rates:", font=('Segoe UI', 10, "bold"),
+        tk.Label(dept_salary_frame, text="Monthly Salaries (PHP):", font=('Segoe UI', 11, "bold"),
                  anchor="w", bg="#FFFDF0").pack(anchor="w")
 
         self.dept_salary_entries = {}
         dept_entries_frame = tk.Frame(dept_salary_frame, bg="#FFFDF0")
-        dept_entries_frame.pack(anchor="w", pady=5)
+        dept_entries_frame.pack(anchor="w", pady=5, fill="x")
 
         row, col = 0, 0
         for dept, salary in config["department_salaries"].items():
             dept_frame = tk.Frame(dept_entries_frame, bg="#FFFDF0")
-            dept_frame.grid(row=row, column=col, padx=20, pady=5, sticky="w")
+            dept_frame.grid(row=row, column=col, padx=(3,20), pady=5, sticky="w")
 
             # Label for department name
-            tk.Label(dept_frame, text=dept, font=('Segoe UI', 10), anchor="w",
+            tk.Label(dept_frame, text=dept, font=('Segoe UI', 11), anchor="w",
                      bg="#FFFDF0").pack(side=tk.LEFT, padx=(0, 5))
 
             # Entry for salary value
@@ -338,7 +338,7 @@ class SettingsScreen(tk.Frame):
 
         # Save button
         save_button = tk.Button(self, text="Save", command=save, font=('Segoe UI', 13),
-                                bg="#6D2323", fg="white", cursor="hand2", width=50, pady=5, relief=tk.RAISED)
+                                bg="#6D2323", fg="white", cursor="hand2", width=30, height=1, pady=2, relief=tk.RAISED)
         save_button.place(relx=0.5, rely=0.96, anchor="s")
 
         # Bind cleanup for mouse wheel when leaving this screen
