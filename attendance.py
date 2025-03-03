@@ -48,8 +48,9 @@ def load_config():
                 "Senior Cutter": 18000.0,
                 "Cutter": 13000.0,
                 "Quality Control": 16000.0,
-                "Senior Helper": 13500.0,
-                "Helper": 12300.0
+                "Helper 1": 13000.0,
+                "Helper 2": 12300.0,
+                "Washer": 12300.0
             }
         }
 
@@ -107,15 +108,20 @@ def get_salary_config(dept_name):
             "deduction_per_minute": ((config["department_salaries"]["Quality Control"] / 30) / 8) / 60,
             "absence_deduction": (config["department_salaries"]["Quality Control"] / 30) / 2
         },
-        "Senior Helper": {
-            "daily_salary": config["department_salaries"]["Senior Helper"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Senior Helper"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Senior Helper"] / 30) / 2
+        "Helper 1": {
+            "daily_salary": config["department_salaries"]["Helper 1"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Helper 1"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Helper 1"] / 30) / 2
         },
-        "Helper": {
-            "daily_salary": config["department_salaries"]["Helper"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Helper"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Helper"] / 30) / 2
+        "Helper 2": {
+            "daily_salary": config["department_salaries"]["Helper 2"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Helper 2"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Helper 2"] / 30) / 2
+        },
+        "Washer": {
+            "daily_salary": config["department_salaries"]["Washer"] / 30,
+            "deduction_per_minute": ((config["department_salaries"]["Washer"] / 30) / 8) / 60,
+            "absence_deduction": (config["department_salaries"]["Washer"] / 30) / 2
         }
     }
 
@@ -149,7 +155,7 @@ def process_dates(start_date, end_date, excel_filename):
                 INNER JOIN hr_department dep ON em.department_id = dep.id
                 LEFT JOIN att_punches ap ON em.id = ap.employee_id
                 WHERE (date(ap.punch_time) BETWEEN ? AND ?) AND (em.emp_privilege=0)
-                ORDER BY em.id, ap.punch_time;
+                ORDER BY em.department_id, ap.punch_time;
             """
             cursor.execute(query, (start_date, end_date))
             results = cursor.fetchall()
@@ -217,6 +223,8 @@ def process_dates(start_date, end_date, excel_filename):
             # Generate Excel report
             generate_excel(excel_filename, employee_attendance, start_date, end_date)
             print(f"Excel report generated successfully: {os.path.join(report_directory, excel_filename)}")
+
+            conn.close()
 
     except sqlite3.Error as e:
         print(f"Database error: {e}")
@@ -306,15 +314,15 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         1: 8,  # ID
         2: 15,  # First Name
         3: 15,  # Last Name
-        4: 15,  # Department
+        4: 15,  # Position
         5: 12,  # Total Shifts
         6: 12,  # Late Minutes
         7: 12,  # Shifts Absent
-        8: 14,  # Deductions
+        8: 14,  # Daily Salary
         9: 14,  # Gross Salary
-        10: 15,  # Paid Leave Days
-        11: 15,  # Paid Leave Amount
-        12: 15,  # Salary Advance
+        10: 14,  # Deductions
+        11: 15,  # Salary Advance
+        12: 15,  # Others
         13: 14,  # Net Salary
     }
 
@@ -325,14 +333,14 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
     # Create report title
     report_title = f"Employee Attendance Report ({start_date} - {end_date})"
     title_cell = sheet.cell(row=1, column=1, value=report_title)
-    title_cell.font = Font(size=16, bold=True)
+    title_cell.font = Font(size=20, bold=True)
     sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=13)
     title_cell.alignment = Alignment(horizontal='center')
 
     # Create headers with formatting
-    headers = ["ID", "First Name", "Last Name", "Department", "Total Shifts", "Late Minutes",
-               "Shifts Absent", "Deductions", "Gross Salary", "Paid Leave Days", "Paid Leave Amount",
-               "Salary Advance", "Net Salary"]
+    headers = ["ID", "First Name", "Last Name", "Position", "Total Shifts", "Late Minutes",
+               "Shifts Absent", "Daily Salary", "Gross Salary", "Deductions", "Salary Advance",
+               "Others", "Net Salary"]
 
     header_row = 2
     for col_num, header_text in enumerate(headers, 1):
@@ -346,6 +354,7 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
     for emp_id, data in employee_attendance.items():
         # Map column data
         daily_salary = data["daily_salary"]
+        num_days = data["gross_salary"] / daily_salary
 
         # Add the basic data cells
         sheet.cell(row=row_num, column=1, value=emp_id)
@@ -355,35 +364,33 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         sheet.cell(row=row_num, column=5, value=data["total_shifts"])
         sheet.cell(row=row_num, column=6, value=data["late"])
         sheet.cell(row=row_num, column=7, value=data["absent"])
-        sheet.cell(row=row_num, column=8, value=data["deductions"])
-        sheet.cell(row=row_num, column=9, value=data["gross_salary"])
 
-        # Add inputtable cells with initial values
-        sheet.cell(row=row_num, column=10, value=0)  # Paid Leave Days (inputtable)
+        # Daily Salary - now editable with initial calculated value
+        daily_salary_cell = sheet.cell(row=row_num, column=8, value=daily_salary)
+        daily_salary_cell.number_format = '#,##0.00'
 
-        # Add formula cells
-        # Paid Leave Amount = Paid Leave Days * Daily Salary
-        paid_leave_formula = f"=J{row_num}*{daily_salary}"
-        sheet.cell(row=row_num, column=11, value=paid_leave_formula)
-        sheet.cell(row=row_num, column=11).number_format = '#,##0.00'
+        # Gross Salary now uses a formula referencing the Daily Salary cell
+        gross_salary_cell = sheet.cell(row=row_num, column=9, value=f"=H{row_num}*{num_days}")
+        gross_salary_cell.number_format = '#,##0.00'
+
+        # Deductions - now editable with initial calculated value
+        deductions_cell = sheet.cell(row=row_num, column=10, value=data["deductions"])
+        deductions_cell.number_format = '#,##0.00'
 
         # Salary Advance (inputtable)
-        sheet.cell(row=row_num, column=12, value=0)
+        salary_advance_cell = sheet.cell(row=row_num, column=11, value=0)
+        salary_advance_cell.number_format = '#,##0.00'
 
-        # Net Salary = Gross Salary - Deductions + Paid Leave Amount - Salary Advance
-        net_salary_formula = f"=I{row_num}-H{row_num}+K{row_num}-L{row_num}"
-        sheet.cell(row=row_num, column=13, value=net_salary_formula)
-        sheet.cell(row=row_num, column=13).number_format = '#,##0.00'
+        # Others (inputtable) - now after Salary Advance
+        others_cell = sheet.cell(row=row_num, column=12, value=0)
+        others_cell.number_format = '#,##0.00'
 
-        # Format number cells
-        money_cols = [8, 9, 11, 12, 13]
-        for col in money_cols:
-            cell = sheet.cell(row=row_num, column=col)
-            if isinstance(cell.value, (int, float)) and not isinstance(cell.value, str):
-                cell.number_format = '#,##0.00'
+        # Net Salary formula updated with the new column positions
+        net_salary_cell = sheet.cell(row=row_num, column=13, value=f"=I{row_num}-J{row_num}-K{row_num}+L{row_num}")
+        net_salary_cell.number_format = '#,##0.00'
 
         # Highlight cells that are meant to be edited by the user
-        input_cols = [10, 12]  # Paid Leave Days and Salary Advance
+        input_cols = [8, 10, 11, 12]  # Daily Salary, Deductions, Salary Advance, Others
         for col in input_cols:
             cell = sheet.cell(row=row_num, column=col)
             cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
@@ -394,7 +401,9 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
     instruction_row = row_num + 2
     instructions = [
         "NOTE:",
-        "- Yellow cells can be edited to adjust Paid Leave Days and Salary Advances",
+        "- Yellow cells can be edited to adjust Daily Salary, Deductions, Salary Advances, and Others",
+        "- The Others column can contain positive or negative values which will be reflected in the Net Salary",
+        "- Changes to yellow cells will automatically update the Net Salary calculation"
     ]
 
     for i, instruction in enumerate(instructions):

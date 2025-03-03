@@ -1,6 +1,6 @@
 {
     "db_path": "C:/Program Files (x86)/ZKBio Time.Net/TimeNet.db",
-    "report_directory": "C:/Users/Public/Documents",
+    "report_directory": "D:/Downloads",
     "department_salaries": {
         "Dining 1": 12750.0,
         "Dining 2": 12300.0,
@@ -11,7 +11,8 @@
         "Senior Cutter": 18000.0,
         "Cutter": 13000.0,
         "Quality Control": 16000.0,
-        "Senior Helper": 13500.0,
-        "Helper": 12300.0
+        "Helper 1": 13000.0,
+        "Helper 2": 12300.0,
+        "Washer": 12300.0
     }
 }

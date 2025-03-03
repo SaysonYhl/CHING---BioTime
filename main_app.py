@@ -24,8 +24,9 @@ default_config = {
         "Senior Cutter": 18000.0,
         "Cutter": 13000.0,
         "Quality Control": 16000.0,
-        "Senior Helper": 13500.0,
-        "Helper": 12300.0
+        "Helper 1": 13000.0,
+        "Helper 2": 12300.0,
+        "Washer": 12300.0
     }
 }
 
@@ -116,15 +117,15 @@ class MainScreen(tk.Frame):
         # Start Date
         tk.Label(date_frame, text="Start Date:", font=('Segoe UI', 12), bg="#FFFDF0").grid(row=0, column=0, padx=(0, 5))
         self.start_date_entry = DateEntry(date_frame, font=('Segoe UI', 12), date_pattern='yyyy-mm-dd',
-                                          background="#6D2323", foreground="white", headersbackground="#6D2323",
-                                          headersforeground="white", selectbackground="#A31D1D")
+                                          background="#6D2323", foreground="white", headersbackground="#FFFDF0",
+                                          headersforeground="#6D2323", selectbackground="#A31D1D")
         self.start_date_entry.grid(row=0, column=1, padx=(0, 70))
 
         # End Date
         tk.Label(date_frame, text="End Date:", font=('Segoe UI', 12), bg="#FFFDF0").grid(row=0, column=2, padx=(0, 5))
         self.end_date_entry = DateEntry(date_frame, font=('Segoe UI', 12), date_pattern='yyyy-mm-dd',
-                                        background="#6D2323", foreground="white", headersbackground="#6D2323",
-                                        headersforeground="white", selectbackground="#A31D1D")
+                                        background="#6D2323", foreground="white", headersbackground="#FFFDF0",
+                                        headersforeground="#6D2323", selectbackground="#A31D1D")
         self.end_date_entry.grid(row=0, column=3, padx=(0, 0))
 
         # Bottom section - Excel File Name Entry
@@ -158,7 +159,7 @@ class MainScreen(tk.Frame):
         # Generate Report button
         generate_button = tk.Button(self, text="Generate Report", font=('Segoe UI', 13),
                                     command=self.generate_report, bg="#6D2323", fg="white",
-                                    cursor="hand2", pady=2, width=30, relief=tk.RAISED)
+                                    cursor="hand2", pady=2, width=20, relief=tk.RAISED)
         generate_button.place(relx=0.5, rely=0.96, anchor="s")
 
     def generate_report(self):
@@ -279,18 +280,18 @@ class SettingsScreen(tk.Frame):
         report_directory_entry, report_dir_frame = create_label_entry("Excel Report Directory:",
                                                                       config["report_directory"])
         tk.Button(report_dir_frame, text="Browse Directory", command=browse_report_directory, cursor="hand2",
-                  relief=tk.GROOVE, bg="snow2", width=14).pack(pady=5, anchor="w")
+                  relief=tk.RIDGE, bg="snow2", width=14).pack(pady=5, anchor="w")
 
         # Database path
         db_path_entry, db_path_frame = create_label_entry("Database Path:", config["db_path"])
         tk.Button(db_path_frame, text="Browse Path", command=browse_db_path, cursor="hand2",
-                  relief=tk.GROOVE, bg="snow2", width=14).pack(pady=5, anchor="w")
+                  relief=tk.RIDGE, bg="snow2", width=14).pack(pady=5, anchor="w")
 
         # Department salaries
         dept_salary_frame = tk.Frame(settings_frame, bg="#FFFDF0")
         dept_salary_frame.pack(anchor="w", pady=5)
 
-        tk.Label(dept_salary_frame, text="Monthly Salaries (PHP):", font=('Segoe UI', 11, "bold"),
+        tk.Label(dept_salary_frame, text="Monthly Salaries:", font=('Segoe UI', 11, "bold"),
                  anchor="w", bg="#FFFDF0").pack(anchor="w")
 
         self.dept_salary_entries = {}
@@ -303,7 +304,7 @@ class SettingsScreen(tk.Frame):
             dept_frame.grid(row=row, column=col, padx=(3,20), pady=5, sticky="w")
 
             # Label for department name
-            tk.Label(dept_frame, text=dept, font=('Segoe UI', 11), anchor="w",
+            tk.Label(dept_frame, text=(dept+ ":"), font=('Segoe UI', 11), anchor="w",
                      bg="#FFFDF0").pack(side=tk.LEFT, padx=(0, 5))
 
             # Entry for salary value
@@ -338,7 +339,7 @@ class SettingsScreen(tk.Frame):
 
         # Save button
         save_button = tk.Button(self, text="Save", command=save, font=('Segoe UI', 13),
-                                bg="#6D2323", fg="white", cursor="hand2", width=30, height=1, pady=2, relief=tk.RAISED)
+                                bg="#6D2323", fg="white", cursor="hand2", width=15, height=1, pady=2, relief=tk.RAISED)
         save_button.place(relx=0.5, rely=0.96, anchor="s")
 
         # Bind cleanup for mouse wheel when leaving this screen
