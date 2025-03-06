@@ -331,7 +331,7 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         sheet.column_dimensions[get_column_letter(col_num)].width = width
 
     # Create report title
-    report_title = f"Employee Attendance Report ({start_date} - {end_date})"
+    report_title = f"Attendance-Salary Report ({start_date} - {end_date})"
     title_cell = sheet.cell(row=1, column=1, value=report_title)
     title_cell.font = Font(size=20, bold=True)
     sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=13)
@@ -396,6 +396,10 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
             cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
 
         row_num += 1
+
+        # Set row height to 30 pixels for all data rows (row 2 to row_num-1)
+        for row in range(2, row_num):
+            sheet.row_dimensions[row].height = 20
 
     # Add instructions
     instruction_row = row_num + 2
