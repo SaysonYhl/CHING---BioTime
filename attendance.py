@@ -224,7 +224,6 @@ def process_dates(start_date, end_date, excel_filename):
             generate_excel(excel_filename, employee_attendance, start_date, end_date)
             print(f"Excel report generated successfully: {os.path.join(report_directory, excel_filename)}")
 
-            conn.close()
 
     except sqlite3.Error as e:
         print(f"Database error: {e}")
@@ -271,11 +270,11 @@ def check_attendance(punches, deduction_per_minute, absence_deduction, start_dat
                 late_minutes = (datetime.datetime.combine(current_date, punch_in_am.time()) - datetime.datetime.combine(
                     current_date, am_late)).total_seconds() // 60
                 status["Late Minutes"] += int(late_minutes)
-                status["Deductions"] += late_minutes * deduction_per_minute
+                # status["Deductions"] += late_minutes * deduction_per_minute
         else:
             # Employee was absent for morning shift
             status["Absent"] += 1
-            status["Deductions"] += absence_deduction
+            # status["Deductions"] += absence_deduction
 
         # Check afternoon shift attendance
         punch_in_pm = next((p for p in pm_shift if pm_start <= p.time() < pm_absent), None)
@@ -287,11 +286,11 @@ def check_attendance(punches, deduction_per_minute, absence_deduction, start_dat
                 late_minutes = (datetime.datetime.combine(current_date, punch_in_pm.time()) - datetime.datetime.combine(
                     current_date, pm_late)).total_seconds() // 60
                 status["Late Minutes"] += int(late_minutes)
-                status["Deductions"] += late_minutes * deduction_per_minute
+                # status["Deductions"] += late_minutes * deduction_per_minute
         else:
             # Employee was absent for afternoon shift
             status["Absent"] += 1
-            status["Deductions"] += absence_deduction
+            # status["Deductions"] += absence_deduction
 
     return status
 
@@ -312,12 +311,12 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
     # Set column widths for better readability
     column_widths = {
         1: 8,  # ID
-        2: 15,  # First Name
-        3: 15,  # Last Name
+        2: 18,  # First Name
+        3: 18,  # Last Name
         4: 15,  # Position
         5: 12,  # Total Shifts
-        6: 12,  # Late Minutes
-        7: 12,  # Shifts Absent
+        6: 13,  # Late Minutes
+        7: 13,  # Shifts Absent
         8: 14,  # Daily Salary
         9: 14,  # Gross Salary
         10: 14,  # Deductions
@@ -355,6 +354,8 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         # Map column data
         daily_salary = data["daily_salary"]
         num_days = data["gross_salary"] / daily_salary
+        late_minutes = data["late"]
+        shifts_absent = data["absent"]
 
         # Add the basic data cells
         sheet.cell(row=row_num, column=1, value=emp_id)
@@ -362,20 +363,23 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         sheet.cell(row=row_num, column=3, value=data["last_name"])
         sheet.cell(row=row_num, column=4, value=data["dept_name"])
         sheet.cell(row=row_num, column=5, value=data["total_shifts"])
-        sheet.cell(row=row_num, column=6, value=data["late"])
-        sheet.cell(row=row_num, column=7, value=data["absent"])
+        sheet.cell(row=row_num, column=6, value=late_minutes)
+        sheet.cell(row=row_num, column=7, value=shifts_absent)
 
-        # Daily Salary - now editable with initial calculated value
+        # Daily Salary - editable with initial calculated value
         daily_salary_cell = sheet.cell(row=row_num, column=8, value=daily_salary)
         daily_salary_cell.number_format = '#,##0.00'
 
-        # Gross Salary now uses a formula referencing the Daily Salary cell
+        # Gross Salary formula referencing the Daily Salary cell
         gross_salary_cell = sheet.cell(row=row_num, column=9, value=f"=H{row_num}*{num_days}")
         gross_salary_cell.number_format = '#,##0.00'
 
-        # Deductions - now editable with initial calculated value
-        deductions_cell = sheet.cell(row=row_num, column=10, value=data["deductions"])
+        # Deductions - now using a formula that references daily salary, late minutes, and shifts absent
+        # Formula: (Late minutes * (daily salary / 8 / 60)) + (Shifts absent * (daily salary / 2))
+        deductions_formula = f"=(F{row_num}*(H{row_num}/8/60))+(G{row_num}*(H{row_num}/2))"
+        deductions_cell = sheet.cell(row=row_num, column=10, value=deductions_formula)
         deductions_cell.number_format = '#,##0.00'
+        deductions_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
 
         # Salary Advance (inputtable)
         salary_advance_cell = sheet.cell(row=row_num, column=11, value=0)
@@ -388,9 +392,11 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         # Net Salary formula updated with the new column positions
         net_salary_cell = sheet.cell(row=row_num, column=13, value=f"=I{row_num}-J{row_num}-K{row_num}+L{row_num}")
         net_salary_cell.number_format = '#,##0.00'
+        net_salary_cell.font = Font(bold=True)
+        net_salary_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
 
         # Highlight cells that are meant to be edited by the user
-        input_cols = [8, 10, 11, 12]  # Daily Salary, Deductions, Salary Advance, Others
+        input_cols = [8, 11, 12]  # Daily Salary, Salary Advance, Others
         for col in input_cols:
             cell = sheet.cell(row=row_num, column=col)
             cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
@@ -405,9 +411,9 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
     instruction_row = row_num + 2
     instructions = [
         "NOTE:",
-        "- Yellow cells can be edited to adjust Daily Salary, Deductions, Salary Advances, and Others",
-        "- The Others column can contain positive or negative values which will be reflected in the Net Salary",
-        "- Changes to yellow cells will automatically update the Net Salary calculation"
+        "- Yellow cells can be edited to adjust Daily Salary, Salary Advances, and Others",
+        "- The Deductions column automatically updates based on Daily Salary changes",
+        "- Changes to yellow cells will automatically update the Net Salary"
     ]
 
     for i, instruction in enumerate(instructions):
