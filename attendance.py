@@ -299,14 +299,81 @@ def check_attendance(punches, deduction_per_minute, absence_deduction, start_dat
 # EXCEL REPORT GENERATION
 # ===============================================================
 
-# Generate Excel report with attendance and salary data
+# Add to your existing code
+
+def get_daily_attendance_status(punches, current_date):
+    """
+    Determine attendance status for morning and afternoon shifts for a specific date
+    Returns: [morning_status, afternoon_status]
+    where status is:
+    '✓' for present and on time
+    '#' for present but late
+    '✕' for absent
+    """
+    am_shift = []
+    pm_shift = []
+
+    # Filter punches for the current date and split by shift
+    for punch in punches:
+        if punch.date() == current_date:
+            if am_start <= punch.time() <= am_latest_out:
+                am_shift.append(punch)
+            elif pm_start <= punch.time() <= pm_latest_out:
+                pm_shift.append(punch)
+
+    # Check morning shift attendance
+    punch_in_am = next((p for p in am_shift if am_start <= p.time() < am_absent), None)
+    punch_out_am = next((p for p in am_shift if am_end <= p.time() <= am_latest_out), None)
+
+    if punch_in_am and punch_out_am:
+        if am_late <= punch_in_am.time() < am_absent:
+            am_status = '#'  # Late
+        else:
+            am_status = '✓'  # Present and on time
+    else:
+        am_status = '✕'  # Absent
+
+    # Check afternoon shift attendance
+    punch_in_pm = next((p for p in pm_shift if pm_start <= p.time() < pm_absent), None)
+    punch_out_pm = next((p for p in pm_shift if pm_end <= p.time() <= pm_latest_out), None)
+
+    if punch_in_pm and punch_out_pm:
+        if pm_late <= punch_in_pm.time() < pm_absent:
+            pm_status = '#'  # Late
+        else:
+            pm_status = '✓'  # Present and on time
+    else:
+        pm_status = '✕'  # Absent
+
+    return [am_status, pm_status]
+
+
+# Modify the generate_excel function to add the attendance table in a separate sheet
 def generate_excel(filename, employee_attendance, start_date, end_date):
     # Load config before generating excel
     config = load_config()
     report_directory = config["report_directory"]
 
     workbook = openpyxl.Workbook()
-    sheet = workbook.active
+
+    # Rename the default sheet to 'Salary Report'
+    salary_sheet = workbook.active
+    salary_sheet.title = "Salary Report"
+
+    # Create a new sheet for attendance
+    attendance_sheet = workbook.create_sheet(title="Daily Attendance")
+
+    # ------------------------------------------------------
+    # FIRST SHEET: SALARY REPORT
+    # ------------------------------------------------------
+
+    # Create a horizontal-only border style (top and bottom only)
+    horizontal_border = Border(
+        left=Side(style=None),
+        right=Side(style=None),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
 
     # Set column widths for better readability
     column_widths = {
@@ -327,13 +394,13 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
 
     # Apply column widths
     for col_num, width in column_widths.items():
-        sheet.column_dimensions[get_column_letter(col_num)].width = width
+        salary_sheet.column_dimensions[get_column_letter(col_num)].width = width
 
     # Create report title
     report_title = f"Attendance-Salary Report ({start_date} - {end_date})"
-    title_cell = sheet.cell(row=1, column=1, value=report_title)
+    title_cell = salary_sheet.cell(row=1, column=1, value=report_title)
     title_cell.font = Font(size=20, bold=True)
-    sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=13)
+    salary_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=13)
     title_cell.alignment = Alignment(horizontal='center')
 
     # Create headers with formatting
@@ -343,10 +410,11 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
 
     header_row = 2
     for col_num, header_text in enumerate(headers, 1):
-        cell = sheet.cell(row=header_row, column=col_num, value=header_text)
+        cell = salary_sheet.cell(row=header_row, column=col_num, value=header_text)
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
         cell.alignment = Alignment(horizontal='center')
+        cell.border = horizontal_border
 
     # Add employee data starting from row 3
     row_num = 3
@@ -358,54 +426,62 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         shifts_absent = data["absent"]
 
         # Add the basic data cells
-        sheet.cell(row=row_num, column=1, value=emp_id)
-        sheet.cell(row=row_num, column=2, value=data["first_name"])
-        sheet.cell(row=row_num, column=3, value=data["last_name"])
-        sheet.cell(row=row_num, column=4, value=data["dept_name"])
-        sheet.cell(row=row_num, column=5, value=data["total_shifts"])
-        sheet.cell(row=row_num, column=6, value=late_minutes)
-        sheet.cell(row=row_num, column=7, value=shifts_absent)
+        salary_sheet.cell(row=row_num, column=1, value=emp_id)
+        salary_sheet.cell(row=row_num, column=2, value=data["first_name"])
+        salary_sheet.cell(row=row_num, column=3, value=data["last_name"])
+        salary_sheet.cell(row=row_num, column=4, value=data["dept_name"])
+        salary_sheet.cell(row=row_num, column=5, value=data["total_shifts"])
+        salary_sheet.cell(row=row_num, column=6, value=late_minutes)
+        salary_sheet.cell(row=row_num, column=7, value=shifts_absent)
 
         # Daily Salary - editable with initial calculated value
-        daily_salary_cell = sheet.cell(row=row_num, column=8, value=daily_salary)
+        daily_salary_cell = salary_sheet.cell(row=row_num, column=8, value=daily_salary)
         daily_salary_cell.number_format = '#,##0.00'
+        daily_salary_cell.border = horizontal_border
 
         # Gross Salary formula referencing the Daily Salary cell
-        gross_salary_cell = sheet.cell(row=row_num, column=9, value=f"=H{row_num}*{num_days}")
+        gross_salary_cell = salary_sheet.cell(row=row_num, column=9, value=f"=H{row_num}*{num_days}")
         gross_salary_cell.number_format = '#,##0.00'
+        gross_salary_cell.border = horizontal_border
 
         # Deductions - now using a formula that references daily salary, late minutes, and shifts absent
         # Formula: (Late minutes * (daily salary / 8 / 60)) + (Shifts absent * (daily salary / 2))
         deductions_formula = f"=(F{row_num}*(H{row_num}/8/60))+(G{row_num}*(H{row_num}/2))"
-        deductions_cell = sheet.cell(row=row_num, column=10, value=deductions_formula)
+        deductions_cell = salary_sheet.cell(row=row_num, column=10, value=deductions_formula)
         deductions_cell.number_format = '#,##0.00'
         deductions_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+        deductions_cell.border = horizontal_border
 
         # Salary Advance (inputtable)
-        salary_advance_cell = sheet.cell(row=row_num, column=11, value=0)
+        salary_advance_cell = salary_sheet.cell(row=row_num, column=11, value=0)
         salary_advance_cell.number_format = '#,##0.00'
+        salary_advance_cell.border = horizontal_border
 
         # Others (inputtable) - now after Salary Advance
-        others_cell = sheet.cell(row=row_num, column=12, value=0)
+        others_cell = salary_sheet.cell(row=row_num, column=12, value=0)
         others_cell.number_format = '#,##0.00'
+        others_cell.border = horizontal_border
 
         # Net Salary formula updated with the new column positions
-        net_salary_cell = sheet.cell(row=row_num, column=13, value=f"=I{row_num}-J{row_num}-K{row_num}+L{row_num}")
+        net_salary_cell = salary_sheet.cell(row=row_num, column=13,
+                                            value=f"=I{row_num}-J{row_num}-K{row_num}+L{row_num}")
         net_salary_cell.number_format = '#,##0.00'
         net_salary_cell.font = Font(bold=True)
         net_salary_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
+        net_salary_cell.border = horizontal_border
 
         # Highlight cells that are meant to be edited by the user
         input_cols = [8, 11, 12]  # Daily Salary, Salary Advance, Others
         for col in input_cols:
-            cell = sheet.cell(row=row_num, column=col)
+            cell = salary_sheet.cell(row=row_num, column=col)
             cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
 
         row_num += 1
 
-        # Set row height to 30 pixels for all data rows (row 2 to row_num-1)
-        for row in range(2, row_num):
-            sheet.row_dimensions[row].height = 20
+    salary_sheet.row_dimensions[2].height = 20
+
+    for row in range(3, row_num):
+        salary_sheet.row_dimensions[row].height = 22.5
 
     # Add instructions
     instruction_row = row_num + 2
@@ -417,10 +493,11 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
     ]
 
     for i, instruction in enumerate(instructions):
-        cell = sheet.cell(row=instruction_row + i, column=1, value=instruction)
+        cell = salary_sheet.cell(row=instruction_row + i, column=1, value=instruction)
         # Make all instruction text bold
         cell.font = Font(bold=True)
-        sheet.merge_cells(start_row=instruction_row + i, start_column=1, end_row=instruction_row + i, end_column=7)
+        salary_sheet.merge_cells(start_row=instruction_row + i, start_column=1, end_row=instruction_row + i,
+                                 end_column=7)
 
     # Apply borders to the main table
     thin_border = Border(
@@ -432,7 +509,104 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
 
     for row in range(2, row_num):
         for col in range(1, 14):
-            sheet.cell(row=row, column=col).border = thin_border
+            salary_sheet.cell(row=row, column=col).border = horizontal_border
+
+    # -------------------------------------------------------
+    # SECOND SHEET: DAILY ATTENDANCE TABLE
+    # -------------------------------------------------------
+
+    # Generate date list for the selected range
+    start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_dt = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+    date_list = [start_dt + datetime.timedelta(days=i) for i in range((end_dt - start_dt).days + 1)]
+
+    # Create title for attendance sheet
+    attendance_title = f"Daily Attendance Record ({start_date} - {end_date})"
+    title_cell = attendance_sheet.cell(row=1, column=1, value=attendance_title)
+    title_cell.font = Font(size=20, bold=True)
+    # Merge cells based on number of dates (3 base columns + number of date columns)
+    end_column = 3 + len(date_list)
+    attendance_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=end_column)
+    title_cell.alignment = Alignment(horizontal='center')
+
+    # Legend for symbols
+    legend_row = 2
+    legend_text = "✓ = Present and on time      # = Present but late      ✕ = Absent for shift"
+    legend_cell = attendance_sheet.cell(row=legend_row, column=1, value=legend_text)
+    legend_cell.font = Font(bold=True)
+    attendance_sheet.merge_cells(start_row=legend_row, start_column=1, end_row=legend_row, end_column=end_column)
+    legend_cell.alignment = Alignment(horizontal='center')
+
+    # Create attendance table headers
+    attendance_header_row = 4
+
+    # Base headers: ID, First Name, Last Name
+    base_headers = ["ID", "First Name", "Last Name"]
+
+    # Create one column for each date in the range with format MM/DD
+    date_headers = [date.strftime("%m/%d") for date in date_list]
+
+    # Combine all headers
+    attendance_headers = base_headers + date_headers
+
+    # Set uniform column widths for all columns in attendance sheet
+    # Base columns (ID, First Name, Last Name)
+    attendance_sheet.column_dimensions[get_column_letter(1)].width = 8  # ID
+    attendance_sheet.column_dimensions[get_column_letter(2)].width = 18  # First Name
+    attendance_sheet.column_dimensions[get_column_letter(3)].width = 18  # Last Name
+
+    # Date columns - set uniform width for date columns
+    for i, _ in enumerate(date_headers, 4):
+        attendance_sheet.column_dimensions[get_column_letter(i)].width = 8
+
+    # Add headers with formatting
+    for col_num, header_text in enumerate(attendance_headers, 1):
+        cell = attendance_sheet.cell(row=attendance_header_row, column=col_num, value=header_text)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = horizontal_border
+
+    # Add employee attendance data starting from the row after headers
+    row_num = attendance_header_row + 1
+
+    # Add data for each employee
+    for emp_id, data in employee_attendance.items():
+        # Add employee base info
+        id_cell = attendance_sheet.cell(row=row_num, column=1, value=emp_id)
+        id_cell.border = horizontal_border
+        id_cell.alignment = Alignment(horizontal='center', vertical='center')
+
+        first_name_cell = attendance_sheet.cell(row=row_num, column=2, value=data["first_name"])
+        first_name_cell.border = horizontal_border
+        first_name_cell.alignment = Alignment(horizontal='left', vertical='center')
+
+        last_name_cell = attendance_sheet.cell(row=row_num, column=3, value=data["last_name"])
+        last_name_cell.border = horizontal_border
+        last_name_cell.alignment = Alignment(horizontal='left', vertical='center')
+
+        # Add attendance status for each date
+        for col_idx, current_date in enumerate(date_list, 4):
+            # Get morning and afternoon status for this date
+            am_pm_status = get_daily_attendance_status(data["punches"], current_date)
+
+            # Create a cell with both statuses (morning/afternoon)
+            cell_value = f"{am_pm_status[0]}\n{am_pm_status[1]}"
+            cell = attendance_sheet.cell(row=row_num, column=col_idx, value=cell_value)
+
+            # Apply color based on status (optional)
+            # You could add color coding here if desired
+
+            # Format the cell
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = horizontal_border
+
+        # Make the row taller to accommodate two lines of text
+        attendance_sheet.row_dimensions[row_num].height = 30
+        row_num += 1
+
+    # Make the second sheet active when opening the file
+    workbook.active = 1  # Index 1 is the second sheet (attendance)
 
     # Save the workbook
     full_path = os.path.join(report_directory, filename)
