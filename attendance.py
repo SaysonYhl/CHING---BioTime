@@ -58,74 +58,21 @@ def load_config():
 # Get salary configuration for a specific department
 def get_salary_config(dept_name):
     """Return salary configuration based on department role"""
-
     config = load_config()
 
-    # Define deduction rates and absence deductions based on department salaries
-    role_config = {
-        "Dining 1": {
-            "daily_salary": config["department_salaries"]["Dining 1"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Dining 1"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Dining 1"] / 30) / 2
-        },
-        "Dining 2": {
-            "daily_salary": config["department_salaries"]["Dining 2"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Dining 2"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Dining 2"] / 30) / 2
-        },
-        "Chief Cook": {
-            "daily_salary": config["department_salaries"]["Chief Cook"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Chief Cook"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Chief Cook"] / 30) / 2
-        },
-        "Senior Cook": {
-            "daily_salary": config["department_salaries"]["Senior Cook"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Senior Cook"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Senior Cook"] / 30) / 2
-        },
-        "Cook": {
-            "daily_salary": config["department_salaries"]["Cook"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Cook"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Cook"] / 30) / 2
-        },
-        "Chief Cutter": {
-            "daily_salary": config["department_salaries"]["Chief Cutter"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Chief Cutter"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Chief Cutter"] / 30) / 2
-        },
-        "Senior Cutter": {
-            "daily_salary": config["department_salaries"]["Senior Cutter"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Senior Cutter"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Senior Cutter"] / 30) / 2
-        },
-        "Cutter": {
-            "daily_salary": config["department_salaries"]["Cutter"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Cutter"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Cutter"] / 30) / 2
-        },
-        "Quality Control": {
-            "daily_salary": config["department_salaries"]["Quality Control"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Quality Control"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Quality Control"] / 30) / 2
-        },
-        "Helper 1": {
-            "daily_salary": config["department_salaries"]["Helper 1"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Helper 1"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Helper 1"] / 30) / 2
-        },
-        "Helper 2": {
-            "daily_salary": config["department_salaries"]["Helper 2"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Helper 2"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Helper 2"] / 30) / 2
-        },
-        "Washer": {
-            "daily_salary": config["department_salaries"]["Washer"] / 30,
-            "deduction_per_minute": ((config["department_salaries"]["Washer"] / 30) / 8) / 60,
-            "absence_deduction": (config["department_salaries"]["Washer"] / 30) / 2
-        }
-    }
+    # Check if department exists in config
+    if dept_name not in config["department_salaries"]:
+        return None
 
-    return role_config.get(dept_name)
+    # Get department salary
+    base_salary = config["department_salaries"].get(dept_name, 0)
+
+    # Calculate all values from base salary using the same formula for all departments
+    return {
+        "daily_salary": base_salary / 30,
+        "deduction_per_minute": ((base_salary / 30) / 8) / 60,
+        "absence_deduction": (base_salary / 30) / 2
+    }
 
 
 # ===============================================================
@@ -154,8 +101,8 @@ def process_dates(start_date, end_date, excel_filename):
                 FROM hr_employee em
                 INNER JOIN hr_department dep ON em.department_id = dep.id
                 LEFT JOIN att_punches ap ON em.id = ap.employee_id
-                WHERE (date(ap.punch_time) BETWEEN ? AND ?) AND (em.emp_privilege=0)
-                ORDER BY em.department_id, ap.punch_time;
+                WHERE (date(ap.punch_time) BETWEEN ? AND ?) AND (em.emp_privilege=0) AND (em.emp_active=1)
+                ORDER BY em.id, ap.punch_time;
             """
             cursor.execute(query, (start_date, end_date))
             results = cursor.fetchall()
@@ -177,15 +124,11 @@ def process_dates(start_date, end_date, excel_filename):
                         "last_name": last_name,
                         "department_id": department_id,
                         "dept_name": dept_name,
-                        "daily_salary": daily_salary,  # Store daily salary for later use
+                        "daily_salary": daily_salary,
                         "total_shifts": total_shifts,
                         "late": 0,
                         "absent": 0,
-                        "deductions": 0,
                         "gross_salary": gross_salary,
-                        "paid_leave_days": 0,  # Default to 0
-                        "salary_advance": 0,  # Default to 0
-                        "net_salary": 0,
                         "punches": []
                     }
 
@@ -194,17 +137,9 @@ def process_dates(start_date, end_date, excel_filename):
 
             # Process attendance for each employee
             for emp_id, data in employee_attendance.items():
-                # Get role-specific configuration
-                salary_config = get_salary_config(data["dept_name"])
-                deduction_per_minute = salary_config["deduction_per_minute"]
-                daily_salary = salary_config["daily_salary"]
-                absence_deduction = salary_config["absence_deduction"]
-
                 # Check attendance status
                 status = check_attendance(
                     data["punches"],
-                    deduction_per_minute,
-                    absence_deduction,
                     start_date,
                     end_date
                 )
@@ -212,9 +147,6 @@ def process_dates(start_date, end_date, excel_filename):
                 # Update employee record with attendance status
                 data["late"] = status["Late Minutes"]
                 data["absent"] = status["Absent"]
-                data["deductions"] = status["Deductions"]
-
-                # Net salary calculation will happen in the Excel sheet via formulas
 
             # Create report directory if it doesn't exist
             if not os.path.exists(report_directory):
@@ -223,7 +155,6 @@ def process_dates(start_date, end_date, excel_filename):
             # Generate Excel report
             generate_excel(excel_filename, employee_attendance, start_date, end_date)
             print(f"Excel report generated successfully: {os.path.join(report_directory, excel_filename)}")
-
 
     except sqlite3.Error as e:
         print(f"Database error: {e}")
@@ -238,8 +169,8 @@ def process_dates(start_date, end_date, excel_filename):
 # ===============================================================
 
 # Check attendance for an employee within the date range
-def check_attendance(punches, deduction_per_minute, absence_deduction, start_date, end_date):
-    status = {"Late Minutes": 0, "Absent": 0, "Deductions": 0}
+def check_attendance(punches, start_date, end_date):
+    status = {"Late Minutes": 0, "Absent": 0}
     punches.sort()
 
     # Generate a list of all dates in the range
@@ -270,11 +201,9 @@ def check_attendance(punches, deduction_per_minute, absence_deduction, start_dat
                 late_minutes = (datetime.datetime.combine(current_date, punch_in_am.time()) - datetime.datetime.combine(
                     current_date, am_late)).total_seconds() // 60
                 status["Late Minutes"] += int(late_minutes)
-                # status["Deductions"] += late_minutes * deduction_per_minute
         else:
             # Employee was absent for morning shift
             status["Absent"] += 1
-            # status["Deductions"] += absence_deduction
 
         # Check afternoon shift attendance
         punch_in_pm = next((p for p in pm_shift if pm_start <= p.time() < pm_absent), None)
@@ -286,11 +215,9 @@ def check_attendance(punches, deduction_per_minute, absence_deduction, start_dat
                 late_minutes = (datetime.datetime.combine(current_date, punch_in_pm.time()) - datetime.datetime.combine(
                     current_date, pm_late)).total_seconds() // 60
                 status["Late Minutes"] += int(late_minutes)
-                # status["Deductions"] += late_minutes * deduction_per_minute
         else:
             # Employee was absent for afternoon shift
             status["Absent"] += 1
-            # status["Deductions"] += absence_deduction
 
     return status
 
@@ -298,8 +225,6 @@ def check_attendance(punches, deduction_per_minute, absence_deduction, start_dat
 # ===============================================================
 # EXCEL REPORT GENERATION
 # ===============================================================
-
-# Add to your existing code
 
 def get_daily_attendance_status(punches, current_date):
     """
@@ -348,7 +273,7 @@ def get_daily_attendance_status(punches, current_date):
     return [am_status, pm_status]
 
 
-# Modify the generate_excel function to add the attendance table in a separate sheet
+# Generate the Excel report
 def generate_excel(filename, employee_attendance, start_date, end_date):
     # Load config before generating excel
     config = load_config()
@@ -356,9 +281,12 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
 
     workbook = openpyxl.Workbook()
 
-    # Rename the default sheet to 'Salary Report'
+    # Rename the default sheet to 'Attendance'
     salary_sheet = workbook.active
-    salary_sheet.title = "Salary Report"
+    salary_sheet.title = "Attendance"
+
+    # Freeze panes
+    salary_sheet.freeze_panes = 'B2'  # Freeze columns
 
     # Create a new sheet for attendance
     attendance_sheet = workbook.create_sheet(title="Daily Attendance")
@@ -377,138 +305,82 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
 
     # Set column widths for better readability
     column_widths = {
-        1: 8,  # ID
-        2: 18,  # First Name
-        3: 18,  # Last Name
-        4: 15,  # Position
-        5: 12,  # Total Shifts
-        6: 13,  # Late Minutes
-        7: 13,  # Shifts Absent
-        8: 14,  # Daily Salary
-        9: 14,  # Gross Salary
-        10: 14,  # Deductions
-        11: 15,  # Salary Advance
-        12: 15,  # Others
-        13: 14,  # Net Salary
+        1: 5,  # Number
+        2: 25,  # Full Name
+        3: 15,  # Position
+        4: 12,  # Daily
+        5: 15,  # Monthly
+        6: 13,  # Late Mins.
+        7: 13,  # Absences
+        8: 15,  # Attendance
     }
 
     # Apply column widths
     for col_num, width in column_widths.items():
         salary_sheet.column_dimensions[get_column_letter(col_num)].width = width
 
-    # Create report title
-    report_title = f"Attendance-Salary Report ({start_date} - {end_date})"
-    title_cell = salary_sheet.cell(row=1, column=1, value=report_title)
-    title_cell.font = Font(size=20, bold=True)
-    salary_sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=13)
-    title_cell.alignment = Alignment(horizontal='center')
-
     # Create headers with formatting
-    headers = ["ID", "First Name", "Last Name", "Position", "Total Shifts", "Late Minutes",
-               "Shifts Absent", "Daily Salary", "Gross Salary", "Deductions", "Salary Advance",
-               "Others", "Net Salary"]
+    headers = ["", "NAME", "POSITION", "DAILY", "MONTHLY", "LATE MINS.", "ABSENCES", "ATTENDANCE"]
 
-    header_row = 2
+    header_row = 1
     for col_num, header_text in enumerate(headers, 1):
         cell = salary_sheet.cell(row=header_row, column=col_num, value=header_text)
         cell.font = Font(bold=True)
         cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
-        cell.alignment = Alignment(horizontal='center')
+        cell.alignment = Alignment(horizontal='center', vertical="center")
         cell.border = horizontal_border
 
-    # Add employee data starting from row 3
-    row_num = 3
-    for emp_id, data in employee_attendance.items():
+    # Add employee data starting from row 2
+    row_num = 2
+    for i, (emp_id, data) in enumerate(employee_attendance.items(), 1):
         # Map column data
         daily_salary = data["daily_salary"]
-        num_days = data["gross_salary"] / daily_salary
         late_minutes = data["late"]
-        shifts_absent = data["absent"]
+        absences = data["absent"] / 2
+        monthly_salary = daily_salary * 30.00
+        full_name = data["last_name"] + ", " + data["first_name"]
 
         # Add the basic data cells
-        salary_sheet.cell(row=row_num, column=1, value=emp_id)
-        salary_sheet.cell(row=row_num, column=2, value=data["first_name"])
-        salary_sheet.cell(row=row_num, column=3, value=data["last_name"])
-        salary_sheet.cell(row=row_num, column=4, value=data["dept_name"])
-        salary_sheet.cell(row=row_num, column=5, value=data["total_shifts"])
-        salary_sheet.cell(row=row_num, column=6, value=late_minutes)
-        salary_sheet.cell(row=row_num, column=7, value=shifts_absent)
+        salary_sheet.cell(row=row_num, column=1, value=f"{i}.")
+        salary_sheet.cell(row=row_num, column=2, value=full_name)
+        salary_sheet.cell(row=row_num, column=3, value=data["dept_name"])
 
         # Daily Salary - editable with initial calculated value
-        daily_salary_cell = salary_sheet.cell(row=row_num, column=8, value=daily_salary)
+        daily_salary_cell = salary_sheet.cell(row=row_num, column=4, value=daily_salary)
         daily_salary_cell.number_format = '#,##0.00'
         daily_salary_cell.border = horizontal_border
 
-        # Gross Salary formula referencing the Daily Salary cell
-        gross_salary_cell = salary_sheet.cell(row=row_num, column=9, value=f"=H{row_num}*{num_days}")
-        gross_salary_cell.number_format = '#,##0.00'
-        gross_salary_cell.border = horizontal_border
+        # Semi-Monthly - calculated based on Daily Salary
+        monthly_salary_cell = salary_sheet.cell(row=row_num, column=5, value=monthly_salary)
+        monthly_salary_cell.number_format = '#,##0.00'
+        monthly_salary_cell.border = horizontal_border
 
-        # Deductions - now using a formula that references daily salary, late minutes, and shifts absent
-        # Formula: (Late minutes * (daily salary / 8 / 60)) + (Shifts absent * (daily salary / 2))
-        deductions_formula = f"=(F{row_num}*(H{row_num}/8/60))+(G{row_num}*(H{row_num}/2))"
-        deductions_cell = salary_sheet.cell(row=row_num, column=10, value=deductions_formula)
-        deductions_cell.number_format = '#,##0.00'
-        deductions_cell.fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        deductions_cell.border = horizontal_border
+        # Late Minutes - initially calculated
+        late_minutes_cell = salary_sheet.cell(row=row_num, column=6, value=late_minutes)
+        late_minutes_cell.border = horizontal_border
 
-        # Salary Advance (inputtable)
-        salary_advance_cell = salary_sheet.cell(row=row_num, column=11, value=0)
-        salary_advance_cell.number_format = '#,##0.00'
-        salary_advance_cell.border = horizontal_border
+        # Days Absent (initial value plus editable formula)
+        absence_cell = salary_sheet.cell(row=row_num, column=7, value=absences)
+        absence_cell.number_format = '#,##0.0'
+        absence_cell.border = horizontal_border
 
-        # Others (inputtable) - now after Salary Advance
-        others_cell = salary_sheet.cell(row=row_num, column=12, value=0)
-        others_cell.number_format = '#,##0.00'
-        others_cell.border = horizontal_border
-
-        # Net Salary formula updated with the new column positions
-        net_salary_cell = salary_sheet.cell(row=row_num, column=13,
-                                            value=f"=I{row_num}-J{row_num}-K{row_num}+L{row_num}")
-        net_salary_cell.number_format = '#,##0.00'
-        net_salary_cell.font = Font(bold=True)
-        net_salary_cell.fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        net_salary_cell.border = horizontal_border
-
-        # Highlight cells that are meant to be edited by the user
-        input_cols = [8, 11, 12]  # Daily Salary, Salary Advance, Others
-        for col in input_cols:
-            cell = salary_sheet.cell(row=row_num, column=col)
-            cell.fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
+        # Attendance (formula that references the absence cell)
+        attendance_formula = f"=15-G{row_num}"  # Assuming column 7 is G
+        attendance_cell = salary_sheet.cell(row=row_num, column=8)
+        attendance_cell.value = attendance_formula  # Set the formula as the value
+        attendance_cell.number_format = '#,##0.0'
+        attendance_cell.border = horizontal_border
+        attendance_cell.fill = PatternFill(start_color="81A8FC", end_color="81A8FC", fill_type="solid")
 
         row_num += 1
 
-    salary_sheet.row_dimensions[2].height = 20
-
-    for row in range(3, row_num):
+    for row in range(2, row_num):
         salary_sheet.row_dimensions[row].height = 22.5
 
-    # Add instructions
-    instruction_row = row_num + 2
-    instructions = [
-        "NOTE:",
-        "- Yellow cells can be edited to adjust Daily Salary, Salary Advances, and Others",
-        "- The Deductions column automatically updates based on Daily Salary changes",
-        "- Changes to yellow cells will automatically update the Net Salary"
-    ]
+    salary_sheet.row_dimensions[header_row].height = 26
 
-    for i, instruction in enumerate(instructions):
-        cell = salary_sheet.cell(row=instruction_row + i, column=1, value=instruction)
-        # Make all instruction text bold
-        cell.font = Font(bold=True)
-        salary_sheet.merge_cells(start_row=instruction_row + i, start_column=1, end_row=instruction_row + i,
-                                 end_column=7)
-
-    # Apply borders to the main table
-    thin_border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
-    )
-
-    for row in range(2, row_num):
-        for col in range(1, 14):
+    for row in range(1, row_num):
+        for col in range(1, 8):
             salary_sheet.cell(row=row, column=col).border = horizontal_border
 
     # -------------------------------------------------------
@@ -571,9 +443,9 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
     row_num = attendance_header_row + 1
 
     # Add data for each employee
-    for emp_id, data in employee_attendance.items():
+    for i, (emp_id, data) in enumerate(employee_attendance.items(), 1):
         # Add employee base info
-        id_cell = attendance_sheet.cell(row=row_num, column=1, value=emp_id)
+        id_cell = attendance_sheet.cell(row=row_num, column=1, value=i)
         id_cell.border = horizontal_border
         id_cell.alignment = Alignment(horizontal='center', vertical='center')
 
@@ -594,9 +466,6 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
             cell_value = f"{am_pm_status[0]}\n{am_pm_status[1]}"
             cell = attendance_sheet.cell(row=row_num, column=col_idx, value=cell_value)
 
-            # Apply color based on status (optional)
-            # You could add color coding here if desired
-
             # Format the cell
             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             cell.border = horizontal_border
@@ -605,8 +474,8 @@ def generate_excel(filename, employee_attendance, start_date, end_date):
         attendance_sheet.row_dimensions[row_num].height = 30
         row_num += 1
 
-    # Make the second sheet active when opening the file
-    workbook.active = 1  # Index 1 is the second sheet (attendance)
+    # Make the attendance sheet active when opening the file
+    workbook.active = 0
 
     # Save the workbook
     full_path = os.path.join(report_directory, filename)

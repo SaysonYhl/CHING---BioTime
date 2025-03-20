@@ -1,5 +1,5 @@
 {
-    "db_path": "C:/Program Files (x86)/ZKBio Time.Net/TimeNet.db",
+    "db_path": "C:\\Program Files (x86)\\ZKBio Time.Net\\TimeNet.db",
     "report_directory": "D:/Downloads",
     "department_salaries": {
         "Dining 1": 12750.0,
@@ -16,42 +16,3 @@
         "Washer": 12300.0
     }
 }
-
-
-
-    am_shift = []
-    pm_shift = []
-
-    # Filter punches for the current date and split by shift
-    for punch in punches:
-        if punch.date() == current_date:
-            if am_start <= punch.time() <= am_latest_out:
-                am_shift.append(punch)
-            elif pm_start <= punch.time() <= pm_latest_out:
-                pm_shift.append(punch)
-
-    # Check morning shift attendance
-    punch_in_am = next((p for p in am_shift if am_start <= p.time() < am_absent), None)
-    punch_out_am = next((p for p in am_shift if am_end <= p.time() <= am_latest_out), None)
-
-    if punch_in_am and punch_out_am:
-        if am_late <= punch_in_am.time() < am_absent:
-            am_status = '#'  # Late
-        else:
-            am_status = '✓'  # Present and on time
-    else:
-        am_status = '✕'  # Absent
-
-    # Check afternoon shift attendance
-    punch_in_pm = next((p for p in pm_shift if pm_start <= p.time() < pm_absent), None)
-    punch_out_pm = next((p for p in pm_shift if pm_end <= p.time() <= pm_latest_out), None)
-
-    if punch_in_pm and punch_out_pm:
-        if pm_late <= punch_in_pm.time() < pm_absent:
-            pm_status = '#'  # Late
-        else:
-            pm_status = '✓'  # Present and on time
-    else:
-        pm_status = '✕'  # Absent
-
-    return [am_status, pm_status]

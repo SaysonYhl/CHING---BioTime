@@ -249,7 +249,6 @@ class SettingsScreen(tk.Frame):
 
         config = load_config()
 
-        # Browsing functions
         def browse_db_path():
             path = filedialog.askopenfilename(title="Select Database File", filetypes=[("Database Files", "*.db")])
             if path:
